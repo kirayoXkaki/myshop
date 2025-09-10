@@ -1,0 +1,68 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String   @id @default(cuid())   // 主键：字符串ID，默认用 cuid() 生成
+  email        String   @unique                // 邮箱：唯一约束（避免重复注册）
+  passwordHash String                           // 密码哈希：存哈希，不存明文
+  createdAt    DateTime @default(now())        // 创建时间：默认 now()
+  orders       Order[]
+}
+
+model Product {
+  id          String   @id @default(cuid())   // 主键：字符串 ID
+  title       String                         // 商品名
+  description String   @default("")          // 描述（默认空字符串）
+  priceCents  Int                             // 价格（分为单位，避免浮点误差）
+  stock       Int      @default(0)            // 库存（默认 0）
+  createdAt   DateTime @default(now())        // 创建时间（默认当前）
+  orderItems  OrderItem[] 
+}
+
+model Payment {
+  id           String   @id @default(cuid())
+  orderId      String   @unique
+  provider     String
+  providerRef  String
+  amountCents  Int
+  status       String
+  raw          Json
+  createdAt    DateTime @default(now())
+  order        Order    @relation(fields: [orderId], references: [id])
+
+  @@unique([provider, providerRef])  // ← 新增：保证同一 provider+ref 只处理一次
+}
+
+model Order {
+  id         String      @id @default(cuid())          // 订单ID
+  userId     String                                     
+  user       User        @relation(fields: [userId], references: [id])
+  totalCents Int                                      // 订单总额（分）
+  status     String      @default("PENDING")          // 订单状态
+  createdAt  DateTime    @default(now())
+  items      OrderItem[]                             // 订单明细（一对多）
+  payment    Payment?                                // 支付记录（一对一，可空）
+}
+
+model OrderItem {
+  id         String   @id @default(cuid())           // 明细ID
+  orderId    String
+  order      Order    @relation(fields: [orderId], references: [id])
+  productId  String
+  product    Product  @relation(fields: [productId], references: [id])
+  qty        Int                                      // 数量
+  unitCents  Int                                      // 单价（分）
+  createdAt  DateTime @default(now())
+}
