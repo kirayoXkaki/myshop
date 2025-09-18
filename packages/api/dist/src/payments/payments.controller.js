@@ -19,6 +19,8 @@ exports.PaymentsController = void 0;
 const common_1 = require("@nestjs/common");
 const stripe_1 = __importDefault(require("stripe"));
 const client_1 = require("@prisma/client");
+const notify_queue_1 = require("../queues/notify.queue");
+const create_session_dto_1 = require("./dto/create-session.dto");
 const prisma = new client_1.PrismaClient();
 const stripe = new stripe_1.default(process.env.STRIPE_SECRET_KEY);
 let PaymentsController = class PaymentsController {
@@ -101,8 +103,9 @@ let PaymentsController = class PaymentsController {
             unitCents: p.priceCents,
         }));
         const totalCents = orderItemsData.reduce((sum, oi) => sum + oi.unitCents * oi.qty, 0);
+        let orderId;
         try {
-            await prisma.$transaction(async (tx) => {
+            orderId = await prisma.$transaction(async (tx) => {
                 const order = await tx.order.create({
                     data: {
                         userId: 'cmf5onyqd0000yqlhlxm0okl3',
@@ -138,6 +141,7 @@ let PaymentsController = class PaymentsController {
                     },
                 });
                 console.log('✅ order created:', order.id, 'total=', totalCents);
+                return order.id;
             });
         }
         catch (e) {
@@ -148,6 +152,12 @@ let PaymentsController = class PaymentsController {
             console.error('[webhook tx] error:', e?.message || e);
             return { received: false, error: 'tx failed' };
         }
+        await (0, notify_queue_1.enqueueOrderNotification)({
+            orderId: orderId,
+            email: 'anon@example.com',
+            items: orderItemsData.map(({ productId, qty }) => ({ productId, qty })),
+            jobId: providerRef
+        });
         return { received: true };
     }
 };
@@ -156,7 +166,7 @@ __decorate([
     (0, common_1.Post)('create'),
     __param(0, (0, common_1.Body)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object]),
+    __metadata("design:paramtypes", [create_session_dto_1.CreateSessionDto]),
     __metadata("design:returntype", Promise)
 ], PaymentsController.prototype, "create", null);
 __decorate([

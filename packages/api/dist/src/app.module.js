@@ -15,13 +15,22 @@ const products_service_1 = require("./products/products.service");
 const payments_controller_1 = require("./payments/payments.controller");
 const orders_controller_1 = require("./orders/orders.controller");
 const orders_service_1 = require("./orders/orders.service");
+const debug_controller_1 = require("./debug/debug.controller");
+const config_1 = require("@nestjs/config");
+const env_validation_1 = require("./config/env.validation");
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
 exports.AppModule = AppModule = __decorate([
     (0, common_1.Module)({
-        imports: [],
-        controllers: [users_controller_1.UsersController, products_controller_1.ProductsController, payments_controller_1.PaymentsController, orders_controller_1.OrdersController],
+        imports: [
+            config_1.ConfigModule.forRoot({
+                isGlobal: true,
+                envFilePath: '.env',
+                validate: env_validation_1.validateEnv
+            }),
+        ],
+        controllers: [users_controller_1.UsersController, products_controller_1.ProductsController, payments_controller_1.PaymentsController, orders_controller_1.OrdersController, debug_controller_1.DebugController],
         providers: [users_service_1.UsersService, products_service_1.ProductsService, orders_service_1.OrdersService],
     })
 ], AppModule);

@@ -1,0 +1,18 @@
+{
+  "name": "worker",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/worker.ts",
+    "start:dev": "tsx src/worker.ts"
+  },
+  "dependencies": {
+    "bullmq": "^5.58.4",
+    "ioredis": "^5.7.0"
+  },
+  "devDependencies": {
+    "tsx": "^4.20.5",
+    "typescript": "^5.9.2"
+  }
+}
