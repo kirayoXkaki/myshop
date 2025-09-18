@@ -3,6 +3,16 @@ export declare class OrdersController {
     private readonly ordersService;
     constructor(ordersService: OrdersService);
     list(userId?: string): Promise<({
+        payment: {
+            id: string;
+            createdAt: Date;
+            status: string;
+            orderId: string;
+            provider: string;
+            providerRef: string;
+            amountCents: number;
+            raw: import("@prisma/client/runtime/library").JsonValue;
+        } | null;
         items: ({
             product: {
                 id: string;
@@ -17,21 +27,11 @@ export declare class OrdersController {
             qty: number;
             unitCents: number;
         })[];
-        payment: {
-            id: string;
-            status: string;
-            createdAt: Date;
-            orderId: string;
-            provider: string;
-            providerRef: string;
-            amountCents: number;
-            raw: import("@prisma/client/runtime/library").JsonValue;
-        } | null;
     } & {
         id: string;
-        userId: string;
-        totalCents: number;
-        status: string;
         createdAt: Date;
+        status: string;
+        totalCents: number;
+        userId: string;
     })[]>;
 }

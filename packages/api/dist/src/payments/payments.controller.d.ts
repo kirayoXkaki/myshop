@@ -1,12 +1,6 @@
+import { CreateSessionDto } from './dto/create-session.dto';
 export declare class PaymentsController {
-    create(dto: {
-        items: {
-            productId: string;
-            qty: number;
-        }[];
-        success_url: string;
-        cancel_url: string;
-    }): Promise<{
+    create(dto: CreateSessionDto): Promise<{
         id: string;
         url: string | null;
     }>;

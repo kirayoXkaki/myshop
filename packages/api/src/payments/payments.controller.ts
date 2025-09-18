@@ -1,6 +1,8 @@
 import { Body, Controller, Headers, Post, Req } from '@nestjs/common';
 import Stripe from 'stripe';
 import { PrismaClient } from '@prisma/client';
+import { enqueueOrderNotification } from '../queues/notify.queue';
+import { CreateSessionDto } from './dto/create-session.dto';
 
 const prisma = new PrismaClient(); // 这步暂时没用到，后续落库会用
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
@@ -14,7 +16,7 @@ export class PaymentsController {
     //   // ...
     // }
     @Post('create')
-    async create(@Body() dto: { items: { productId: string; qty: number }[], success_url: string, cancel_url: string }) {
+    async create(@Body() dto: CreateSessionDto) {
         // 1) 查数据库拿价格（服务端定价，避免前端篡改）
         const ids = dto.items.map(i => i.productId);
         const products = await prisma.product.findMany({ where: { id: { in: ids } } });
@@ -109,9 +111,11 @@ export class PaymentsController {
         }));
         const totalCents = orderItemsData.reduce((sum, oi) => sum + oi.unitCents * oi.qty, 0);
 
+        let orderId: string;
+
         // ---------- 事务：建订单/明细/支付 + 扣库存 ----------
         try {
-            await prisma.$transaction(async (tx) => {
+            orderId = await prisma.$transaction(async (tx) => {
                 // 1) 创建订单（匿名用户示例：不关联合法 userId）
                 const order = await tx.order.create({
                     data: {
@@ -155,6 +159,7 @@ export class PaymentsController {
                 });
 
                 console.log('✅ order created:', order.id, 'total=', totalCents);
+                return order.id;
             });
         } catch (e: any) {
             // 如果并发触发，可能因 @@unique(provider,providerRef) 冲突而失败 → 视为幂等成功
@@ -165,6 +170,13 @@ export class PaymentsController {
             console.error('[webhook tx] error:', e?.message || e);
             return { received: false, error: 'tx failed' };
         }
+
+        await enqueueOrderNotification({
+            orderId: orderId,
+            email: 'anon@example.com', // TODO: 接入登录后替换为真实邮箱
+            items: orderItemsData.map(({ productId, qty }) => ({ productId, qty })),
+            jobId: providerRef // 如：session.id，避免 Stripe 重试导致重复入队
+            });
 
         return { received: true };
     }
