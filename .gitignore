@@ -35,3 +35,11 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 next-env.d.ts
+node_modules/
+.next/
+dist/
+out/
+.turbo/
+.vercel/
+coverage/
+.DS_Store
