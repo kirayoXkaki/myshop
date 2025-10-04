@@ -19,6 +19,7 @@ model User {
   passwordHash String                           // 密码哈希：存哈希，不存明文
   createdAt    DateTime @default(now())        // 创建时间：默认 now()
   orders       Order[]
+  refreshTokens  RefreshToken[] 
 }
 
 model Product {
@@ -66,3 +67,15 @@ model OrderItem {
   unitCents  Int                                      // 单价（分）
   createdAt  DateTime @default(now())
 }
+
+model RefreshToken {
+  id         String   @id @default(cuid())       // jti
+  userId     String
+  user       User     @relation(fields: [userId], references: [id])
+  revoked    Boolean  @default(false)
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+
+  @@index([userId])
+}
+

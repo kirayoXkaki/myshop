@@ -1,12 +1,13 @@
 import { Controller, Get } from '@nestjs/common';
 import { ProductsService } from './products.service';
 
-@Controller('products') // ① 基础路由前缀：/products
+@Controller('products')
 export class ProductsController {
-  constructor(private readonly productsService: ProductsService) {} // ② 注入 service
+  constructor(private readonly products: ProductsService) {}
 
-  @Get() // ③ GET /products
+  @Get()
   async list() {
-    return this.productsService.findAll(); // ④ 调用 service
+    const r = await this.products.findAll();
+    return r.data; // ✅ 只把数组返回给前端
   }
 }

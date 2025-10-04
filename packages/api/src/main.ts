@@ -17,11 +17,28 @@ async function bootstrap() {
 //   }),
 // );//影响其他route不适用
 
-  const config = new DocumentBuilder().setTitle('MyShop API').setVersion('1.0').build();
+  const config = new DocumentBuilder()
+    .setTitle('MyShop API')
+    .setVersion('1.0')
+    .addBearerAuth(               // 👈 添加 JWT Bearer 认证
+      {
+        type: 'http',
+        scheme: 'bearer',
+        bearerFormat: 'JWT',
+      },
+      'access-token',             // 这个名字随便取，后面要对应
+    )
+    .build();
   const doc = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('docs', app, doc);
 
   app.use('/payments/webhook', raw({ type: 'application/json' }));
+
+  app.enableCors({
+  origin: 'http://localhost:3000',
+  credentials: true,
+});
+
 
   app.useGlobalPipes(new ValidationPipe({
     whitelist: true,

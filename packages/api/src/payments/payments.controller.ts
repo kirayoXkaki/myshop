@@ -1,12 +1,15 @@
-import { Body, Controller, Headers, Post, Req } from '@nestjs/common';
+import { Body, Controller, Headers, Post, Req,UseGuards } from '@nestjs/common';
 import Stripe from 'stripe';
 import { PrismaClient } from '@prisma/client';
 import { enqueueOrderNotification } from '../queues/notify.queue';
 import { CreateSessionDto } from './dto/create-session.dto';
+import { JwtAuthGuard } from 'src/auth/jwt-auth.guard';
+import { ApiBearerAuth} from '@nestjs/swagger';
 
 const prisma = new PrismaClient(); // 这步暂时没用到，后续落库会用
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
 
+@ApiBearerAuth('access-token') 
 @Controller('payments')
 export class PaymentsController {
     // 创建支付会话：接受 items，返回 Stripe Checkout 的 url
@@ -15,8 +18,11 @@ export class PaymentsController {
     //   console.log('[payments/create] body =', dto);
     //   // ...
     // }
+    @UseGuards(JwtAuthGuard)
     @Post('create')
-    async create(@Body() dto: CreateSessionDto) {
+    async create(@Req() req: any,@Body() dto: CreateSessionDto) {
+        const userId = req.user.userId; 
+        const email =req.user.email ?? '';
         // 1) 查数据库拿价格（服务端定价，避免前端篡改）
         const ids = dto.items.map(i => i.productId);
         const products = await prisma.product.findMany({ where: { id: { in: ids } } });
@@ -41,6 +47,8 @@ export class PaymentsController {
             cancel_url: dto.cancel_url,
             metadata: {
                 itemsJson: JSON.stringify(dto.items), // [{productId, qty}, ...]
+                userId, 
+                email,
             },
         });
 
@@ -63,6 +71,7 @@ export class PaymentsController {
         }
 
         const session = event.data.object as Stripe.Checkout.Session;
+        const metaUserId = session.metadata?.userId || 'anonymous';
 
         // ---------- 幂等：若已处理过则直接返回 ----------
         const provider = 'stripe';
@@ -119,7 +128,7 @@ export class PaymentsController {
                 // 1) 创建订单（匿名用户示例：不关联合法 userId）
                 const order = await tx.order.create({
                     data: {
-                        userId: 'cmf5onyqd0000yqlhlxm0okl3',      // 你可以改成真实 userId；先用固定值演示
+                        userId: metaUserId ,      // 你可以改成真实 userId；先用固定值演示
                         totalCents,
                         status: 'PAID',
                     },

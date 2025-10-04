@@ -17,9 +17,9 @@ export class CreateSessionDto {
   @Type(() => CreateItemDto)
   items!: CreateItemDto[];
 
-  @IsUrl()
+  @IsUrl({ require_tld: process.env.NODE_ENV === 'production' })
   success_url!: string;
 
-  @IsUrl()
+  @IsUrl({ require_tld: process.env.NODE_ENV === 'production' })
   cancel_url!: string;
 }

@@ -1,14 +1,21 @@
-import { Controller, Get, Query } from '@nestjs/common';
+import { Controller, Get, Query, Req, UseGuards } from '@nestjs/common';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { OrdersService } from './orders.service';
 
-@Controller('orders') // ① 路由前缀：/orders
+@UseGuards(JwtAuthGuard)
+@Controller('orders')
 export class OrdersController {
-  constructor(private readonly ordersService: OrdersService) {} // ② 注入 service
+  constructor(private readonly orders: OrdersService) {}
 
   @Get()
-  async list(@Query('userId') userId?: string) {
-    // ③ 暂时用 query 传 userId（后续接入登录改为从 token 里读）
-    const uid = userId || 'anonymous'; // ④ 没传则默认 anonymous（便于你立即验证）
-    return this.ordersService.findByUser(uid);
+  async list(
+    @Req() req: any,
+    @Query('page') page = '1',
+    @Query('pageSize') pageSize = '10',
+  ) {
+    const p = Number(page) || 1;
+    const ps = Number(pageSize) || 10;
+    const { rows, total } = await this.orders.findByUserPaged(req.user.userId, p, ps);
+    return { data: rows, total, page: p, pageSize: ps };
   }
 }

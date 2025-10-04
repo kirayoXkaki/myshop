@@ -9,6 +9,7 @@ import { OrdersService } from './orders/orders.service';
 import { DebugController } from './debug/debug.controller'; 
 import { ConfigModule } from '@nestjs/config';
 import { validateEnv } from './config/env.validation';
+import { AuthModule } from './auth/auth.module';
 
 @Module({
   imports: [
@@ -18,6 +19,7 @@ import { validateEnv } from './config/env.validation';
       validate: validateEnv
       // ignoreEnvFile: false, // 若生产用系统环境变量，可改为 true
     }),
+    AuthModule
   ],
   controllers: [UsersController, ProductsController, PaymentsController, OrdersController,DebugController], // ← 确保有 ProductsController
   providers: [UsersService, ProductsService,OrdersService],         // ← 确保有 ProductsService
